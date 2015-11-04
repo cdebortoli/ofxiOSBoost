@@ -31,6 +31,7 @@ PARALLEL_MAKE=16   # how many threads to make boost with
 
 BOOST_V1=1.59.0
 BOOST_V2=1_59_0
+ZLIB_VERSION=55
 
 #BITCODE="-fembed-bitcode"  # Uncomment this line for Bitcode generation
 
@@ -65,9 +66,9 @@ case $CURRENTPATH in
           ;;
 esac
 
-: ${BOOST_LIBS:="random regex graph random chrono thread signals filesystem system date_time"}
+: ${BOOST_LIBS:="random regex graph random chrono thread signals filesystem system date_time iostreams"}
 : ${IPHONE_SDKVERSION:=`xcodebuild -showsdks | grep iphoneos | egrep "[[:digit:]]+\.[[:digit:]]+" -o | tail -1`}
-: ${EXTRA_CPPFLAGS:="-fPIC -DBOOST_SP_USE_SPINLOCK -std=$CPPSTD -stdlib=$STDLIB -miphoneos-version-min=$IOS_MIN_VERSION $BITCODE -fvisibility=hidden -fvisibility-inlines-hidden"}
+: ${EXTRA_CPPFLAGS:="-fPIC -DBOOST_SP_USE_SPINLOCK -stdlib=$STDLIB -miphoneos-version-min=$IOS_MIN_VERSION $BITCODE -fvisibility=hidden -fvisibility-inlines-hidden"}
 
 : ${TARBALLDIR:=`pwd`/..}
 : ${SRCDIR:=`pwd`/../build/src}
@@ -86,6 +87,9 @@ BOOST_TARBALL=$TARBALLDIR/boost_$BOOST_VERSION2.tar.bz2
 BOOST_SRC=$SRCDIR/boost_${BOOST_VERSION2}
 BOOST_INCLUDE=$BOOST_SRC/boost
 
+ZLIB_TARBALL=$TARBALLDIR/zlib-${ZLIB_VERSION}.tar.gz
+ZLIB_SRC=$SRCDIR/zlib-${ZLIB_VERSION}
+export ZLIB_SOURCE=$ZLIB_SRC/zlib
 
 
 #===============================================================================
@@ -170,6 +174,16 @@ downloadBoost()
     doneSection
 }
 
+downloadZLib() 
+{
+   if [ ! -s $TARBALLDIR/zlib-55.tar.gz ]; then
+       echo "Downloading Zlib ${ZLIB_VERSION}"
+       curl -L -o $TARBALLDIR/zlib-${ZLIB_VERSION}.tar.gz http://www.opensource.apple.com/tarballs/zlib/zlib-${ZLIB_VERSION}.tar.gz
+   fi
+   
+   doneSection
+}
+
 #===============================================================================
 
 unpackBoost()
@@ -184,6 +198,19 @@ unpackBoost()
 
     doneSection
 }
+
+unpackZlib(){
+   [ -f "$ZLIB_TARBALL" ] || abort "zlib source tarball missing."
+   
+   echo Unpacking zlib into $SRCDIR...
+   
+   [ -d $SRCDIR ] || mkdir -p $SRCDIR
+   [ -d $ZLIB_SRC ] || ( cd $SRCDIR; tar zxf $ZLIB_TARBALL )
+   [ -d $ZLIB_SRC ] && echo "   ...unpacked as $ZLIB_SRC"
+   
+   doneSection
+}
+
 
 #===============================================================================
 
@@ -403,6 +430,7 @@ mkdir -p $IOSBUILDDIR
 cleanEverythingReadyToStart #may want to comment if repeatedly running during dev
 restoreBoost
 
+echo "ZLIB_SOURCE:       $ZLIB_SOURCE"
 echo "BOOST_VERSION:     $BOOST_VERSION"
 echo "BOOST_LIBS:        $BOOST_LIBS"
 echo "BOOST_SRC:         $BOOST_SRC"
@@ -415,6 +443,8 @@ echo "XCODE_ROOT:        $XCODE_ROOT"
 echo "COMPILER:          $COMPILER"
 echo
 
+downloadZLib
+unpackZlib
 downloadBoost
 unpackBoost
 inventMissingHeaders
